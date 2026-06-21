@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: transport-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: transport
+      POSTGRES_PASSWORD: transport_secret
+      POSTGRES_DB: transport_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transport -d transport_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - transport-net
+
+  transport-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: transport-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: development
+      APP_PORT: "8080"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_USER: transport
+      DB_PASSWORD: transport_secret
+      DB_NAME: transport_db
+      DB_SSLMODE: disable
+      DB_MAX_CONNS: "20"
+      JWT_ACCESS_SECRET: dev_access_secret
+      JWT_REFRESH_SECRET: dev_refresh_secret
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 168h
+    ports:
+      - "8080:8080"
+    networks:
+      - transport-net
+
+networks:
+  transport-net:
+    name: transport-net
+    driver: bridge
+
+volumes:
+  postgres_data:
