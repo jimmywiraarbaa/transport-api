@@ -19,6 +19,7 @@ services:
       JWT_REFRESH_SECRET: dev_refresh_secret
       JWT_ACCESS_TTL: 15m
       JWT_REFRESH_TTL: 168h
+      CORS_ORIGINS: "https://transport-frontend-murex.vercel.app"
     ports:
       - "8080:8080"
     networks:
