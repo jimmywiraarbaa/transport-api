@@ -3,7 +3,9 @@ package database
 import (
 	"context"
 	"fmt"
+	"net/url"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jimmywiraarbaa/transport-api/internal/config"
 )
@@ -12,7 +14,9 @@ import (
 func New(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode,
+		url.QueryEscape(cfg.User),
+		url.QueryEscape(cfg.Password),
+		cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode,
 	)
 
 	poolCfg, err := pgxpool.ParseConfig(dsn)
@@ -20,6 +24,10 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) 
 		return nil, fmt.Errorf("parse db config: %w", err)
 	}
 	poolCfg.MaxConns = cfg.MaxConns
+
+	// PgBouncer (Supabase pooler) doesn't support prepared statements.
+	// Use QueryExecExec to avoid caching them.
+	poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
